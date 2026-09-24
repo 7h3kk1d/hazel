@@ -175,6 +175,11 @@ module Update = {
     | AutoprobeMode
     | SetAutoprobe(Haz3lcore.AutoProbe.t)
     | SampleStickyInPlace
+    /* Show every probed value at a node rather than one at a time. Probe
+       display settings live in a global ref outside the model, so this routes
+       through the update loop the way SampleStickyInPlace already does — which
+       is what bumps the version ProjectorView compares against to re-render. */
+    | SetSampleWindow(Language.Sample.Window.mode)
     | ToggleLineNumbers
     | ToggleRelativeLineNumbers
     | CapUndoStack
@@ -511,6 +516,9 @@ module Update = {
             settings;
           }
         )
+      | SetSampleWindow(mode) =>
+        Haz3lcore.ProbeProj.Settings.go(SetWindow(mode));
+        settings;
       | ToggleLineNumbers => {
           ...settings,
           line_numbers: !settings.line_numbers,
