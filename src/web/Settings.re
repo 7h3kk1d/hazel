@@ -156,6 +156,11 @@ module Update = {
     | Assist
     | Elaborate
     | LiveTyping
+    /* Setting it outright rather than flipping it. A toggle is all the UI
+       needs, but a caller that cannot see the current value — an embedding
+       page driving Hazel through ActionChannel — can only ever guess with
+       one. */
+    | SetLiveTyping(bool)
     | Benchmark
     | ContextInspector
     | InstructorMode
@@ -256,6 +261,13 @@ module Update = {
           core: {
             ...settings.core,
             live_typing: !settings.core.live_typing,
+          },
+        }
+      | SetLiveTyping(b) => {
+          ...settings,
+          core: {
+            ...settings.core,
+            live_typing: b,
           },
         }
       | DisplayWarnings => {

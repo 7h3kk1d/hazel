@@ -228,6 +228,8 @@ let start = default_model => {
         ),
       );
     });
+    /* window.hazelAction / window.hazelLoad, for an embedding page */
+    ActionChannel.install(schedule_action);
     // Sync log count from database
     Log.sync_count();
   };
