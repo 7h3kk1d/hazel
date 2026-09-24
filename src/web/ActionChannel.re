@@ -56,13 +56,18 @@ let install = (schedule_action: Page.Update.t => unit): unit => {
   };
 
   /* The program to load, as a fresh scratchpad cell. The shape is exactly what
-     Init.re builds for the empty scratchpad, with of_slide_text in place of the
-     empty zipper so that probe and statics triggers in the text are honoured
-     and leading indentation is stripped. */
+     Init.re builds for the empty scratchpad, with the caller's text in place of
+     the empty zipper; probe and statics triggers in it are honoured.
+
+     of_text, not of_slide_text: the latter runs trim_leading, which strips the
+     whitespace after every newline. A .hz slide compiled in as a blob wants
+     that, but a program sent from a host page is written to be read on screen,
+     and losing its indentation leaves Hazel's auto-indent to guess -- which it
+     does well for a case body and not at all for a list spread over lines. */
   let persistent_of_text = (text: string): CellEditor.Model.persistent => {
     editor:
       text
-      |> PersistentZipper.of_slide_text
+      |> PersistentZipper.of_text
       |> Editor.Model.mk_persistent(~root=Exp),
     result: EvalResult.Model.init |> EvalResult.Model.persist,
   };
