@@ -27,12 +27,34 @@ let totalize_ty = (expected_ty: option(Typ.t)): Typ.t =>
   | None => Typ.fresh(Unknown(Internal))
   };
 
+/* Which of the three readings a type probe shows. At file top level, next to
+   model_string_for_reading, so that the trigger-option mapping can build a
+   model string without going through the sealed M. */
+[@deriving (show({with_path: false}), sexp, yojson)]
+type reading =
+  | Expected
+  | Self
+  | Dynamic;
+
+/* `^^statics_dynamic` / `_self` / `_expected`: which reading the probe opens
+   on. Without this a type probe always starts on Expected and has to be
+   clicked around to the live type, which is no good for text meant to load
+   ready to read — a .hz slide, or a program pushed in from an embedding page.
+   Mirrors ProbeProj.model_string_for_renderer. */
+let model_string_for_reading = (name: string): option(string) =>
+  (
+    switch (name) {
+    | "expected" => Some(Expected)
+    | "self" => Some(Self)
+    | "dynamic" => Some(Dynamic)
+    | _ => None
+    }
+  )
+  |> Option.map(r => r |> sexp_of_reading |> Sexplib.Sexp.to_string);
+
 module M: Projector = {
   [@deriving (show({with_path: false}), sexp, yojson)]
-  type model =
-    | Expected
-    | Self
-    | Dynamic;
+  type model = reading;
 
   [@deriving (show({with_path: false}), sexp, yojson)]
   type action =

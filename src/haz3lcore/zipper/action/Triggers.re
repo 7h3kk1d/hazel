@@ -36,6 +36,7 @@ let refractor_model_of_opt =
     (kind: ProjectorCore.Kind.t, opt: string): option(string) =>
   switch (kind) {
   | Probe => ProbeProj.model_string_for_renderer(opt)
+  | Statics => TypeProj.model_string_for_reading(opt)
   | _ => None
   };
 
