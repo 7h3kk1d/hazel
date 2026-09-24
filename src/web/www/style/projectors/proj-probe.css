@@ -1091,6 +1091,11 @@
   animation: none;
 }
 
+/* The header row stays live so the column menus and add-column open in the chip. */
+.value .value-rich .table thead {
+  pointer-events: auto;
+}
+
 .value .value-rich .table th {
   padding-left: 15px;
   padding-right: 15px;

@@ -755,9 +755,9 @@ let value_view =
       /* rich content renders INSIDE the sample chip, inert
          (pointer-events: none), so the chip keeps every sample
          interaction: right/alt-click dropdown (with Hide), click to
-         capture, dbl-click toggles. Explicit renderers embed when they
-         fit inline_rows_cap (taller ones live in the drawer); auto-rich
-         (wells) embeds unconditionally. */
+         capture, dbl-click toggles. Explicit renderers embed at any
+         size; auto-rich embeds when it fits inline_rows_cap, or
+         unconditionally for per-probe auto (wells). */
       let render_rich = (r: packed_renderer, pm: packed_model) =>
         r.render_model(
           pm,
@@ -773,15 +773,7 @@ let value_view =
         switch (ctx.rich_model) {
         | Some(pm) =>
           switch (find(RichProbe.renderer_id_of_model(pm))) {
-          | Some(r)
-              when
-                r.can_handle(ctx.sort, sample.value)
-                && (
-                  switch (r.drawer_rows(ctx.sort, sample.value)) {
-                  | Some(n) => n <= inline_rows_cap
-                  | None => true
-                  }
-                ) =>
+          | Some(r) when r.can_handle(ctx.sort, sample.value) =>
             render_rich(r, pm)
           | _ => None
           }
@@ -2221,25 +2213,6 @@ let rich_drawer_rows = (model: probe_model, info: info): option(int) => {
   };
 };
 
-/* Leaving the drawer hides a rich view that only fits there, so drop the
-   renderer with it: the menu then offers `View as` again and choosing it
-   reopens the drawer (#2519). Views that fit inline stay active and keep
-   embedding in the chip. */
-let set_drawer_mode =
-    (model: probe_model, info: info, drawer_mode: bool): probe_model => {
-  let needs_drawer =
-    switch (model.active_renderer, rich_drawer_rows(model, info)) {
-    | (Some(_), Some(n)) => n > inline_rows_cap
-    | _ => false
-    };
-  {
-    ...model,
-    drawer_mode,
-    active_renderer:
-      !drawer_mode && needs_drawer ? None : model.active_renderer,
-  };
-};
-
 [@deriving (show({with_path: false}), sexp, yojson)]
 type a = action;
 
@@ -2314,11 +2287,17 @@ module M: Projector = {
       /* Toggling moves the focusable .live-offside between DOM slots, which
        * drops focus; schedule a restore via after_display. */
       FocusEffect.schedule(info.id);
-      set_drawer_mode(model, info, !model.drawer_mode);
+      {
+        ...model,
+        drawer_mode: !model.drawer_mode,
+      };
     | SetDrawerMode(b) =>
       Settings.version := Settings.version^ + 1;
       FocusEffect.schedule(info.id);
-      set_drawer_mode(model, info, b);
+      {
+        ...model,
+        drawer_mode: b,
+      };
     | ToggleDropdown(did) =>
       Settings.set_open_dropdown(
         Settings.open_dropdown^ == Some(did) ? None : Some(did),
@@ -2338,36 +2317,18 @@ module M: Projector = {
       SampleLength.reset();
       model;
     | ToggleModal(pm) =>
-      /* activation: content taller than the inline cap opens the
-         drawer (chevron / Cmd+ArrowUp toggles back) */
-      let activate = () => {
-        let wants_drawer =
-          switch (
-            rich_drawer_rows(
-              {
-                ...model,
-                active_renderer: pm,
-              },
-              info,
-            )
-          ) {
-          | Some(n) => n > inline_rows_cap
-          | None => false
-          };
-        {
-          ...model,
-          active_renderer: pm,
-          drawer_mode: model.drawer_mode || wants_drawer,
-        };
+      let activated = {
+        ...model,
+        active_renderer: pm,
       };
       switch (model.active_renderer, pm) {
-      | (None, _) => activate()
+      | (None, _) => activated
       | (Some(active), Some(next))
           when
             RichProbe.renderer_id_of_model(active)
             != RichProbe.renderer_id_of_model(next) =>
         /* a different renderer switches rather than toggling off */
-        activate()
+        activated
       | (Some(_), _) => {
           ...model,
           active_renderer: None,
