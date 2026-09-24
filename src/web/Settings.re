@@ -141,7 +141,10 @@ module Update = {
     | ShowFilters
     | ShowSettings
     | ShowHiddenSteps
-    | ProjectTables;
+    | ProjectTables
+    /* Set outright, like SetLiveTyping, for a caller that cannot see the
+       current value. */
+    | SetProjectTables(bool);
 
   [@deriving (show({with_path: false}), sexp, yojson)]
   type t =
@@ -301,6 +304,10 @@ module Update = {
           | ProjectTables => {
               ...evaluation,
               project_tables: !evaluation.project_tables,
+            }
+          | SetProjectTables(b) => {
+              ...evaluation,
+              project_tables: b,
             }
           | ShowCaseClauses => {
               ...evaluation,
