@@ -1082,3 +1082,17 @@
   position: static;
   display: inline-block;
 }
+
+/* An embedded table's cell values are `.value`s too, so the sample chip's
+   descendant rules (backing, focus/hover outlines) would paint every cell. */
+.value .value-rich .table .value {
+  background-color: transparent !important;
+  outline: none !important;
+  animation: none;
+}
+
+.value .value-rich .table th {
+  padding-left: 15px;
+  padding-right: 15px;
+  white-space: nowrap;
+}
