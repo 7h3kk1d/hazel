@@ -173,6 +173,9 @@ module Update = {
     | Sidebar(SidebarModel.Settings.action)
     | ExplainThis(ExplainThisModel.Settings.action)
     | DisplayWarnings
+    /* Set outright, like SetLiveTyping, for a caller that cannot see the
+       current value. */
+    | SetDisplayWarnings(bool)
     | FlipAnimations
     | CompletionDisplay(CompletionDisplay.t)
     | AutoprobeMode
@@ -283,6 +286,13 @@ module Update = {
           core: {
             ...settings.core,
             display_warnings: !settings.core.display_warnings,
+          },
+        }
+      | SetDisplayWarnings(b) => {
+          ...settings,
+          core: {
+            ...settings.core,
+            display_warnings: b,
           },
         }
       | Evaluation(u) =>
