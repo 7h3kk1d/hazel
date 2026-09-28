@@ -14,6 +14,8 @@ open Haz3lcore;
  * already-open drawers as freshly opened and scroll #main for nothing. */
 let prev: ref(option((string, Id.Map.t(int)))) = ref(None);
 
+let enabled = false;
+
 let scroll_main_by = (dy: float): unit =>
   Js.Opt.iter(
     Dom_html.document##getElementById(Js.string("main")),
@@ -78,8 +80,12 @@ let update =
         ~measured,
         ~caret_row,
       );
-    /* skip while EdgeScroll is driving the viewport, to avoid fighting it */
-    if (delta_rows != 0 && !EdgeScroll.is_active()) {
+    /* skip while EdgeScroll is driving the viewport, to avoid fighting it.
+     * Off for the talk: a rich probe's column action rewrites the probed
+     * expression, which moves its drawer and the caret together, and the
+     * compensation read that as a drawer growing above the caret and scrolled
+     * the editor down by the drawer's height. */
+    if (enabled && delta_rows != 0 && !EdgeScroll.is_active()) {
       let delta_px = float_of_int(delta_rows) *. font_metrics.row_height;
       scroll_main_by(delta_px);
     };
