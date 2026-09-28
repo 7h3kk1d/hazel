@@ -9,6 +9,9 @@
 include MenuListener.Make({
   let menu_class = "context-menu";
   let supports_keys = true;
-  let scroll_into_view = true;
+  /* Off for the talk: the menu hangs below a probe's table, and scrolling
+   * its selected item into view on every sync dragged the whole editor
+   * down, where it stayed after the menu closed. */
+  let scroll_into_view = false;
   let close_on_scroll = false;
 });
