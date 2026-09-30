@@ -839,6 +839,12 @@
   overflow: visible;
 }
 
+/* The same release for an explicitly chosen table drawn in each sample
+ * chip (the side-by-side drawer), when it fits without scrolling. */
+.below-wrapper:has(.live-offside:not(.drawer-overflow) .value-rich) {
+  overflow: visible;
+}
+
 /* Keep headers in view while a tall rich drawer scrolls (sticks to the
  * scroll container, .below-wrapper). */
 .below-wrapper .rich-drawer.overflowing .table th {

@@ -2391,9 +2391,14 @@ module M: Projector = {
         }
       );
     /* In drawer mode an active rich renderer replaces the sample view in
-     * the drawer itself; inline mode embeds small rich views in the chip. */
+     * the drawer itself; inline mode embeds small rich views in the chip.
+     * Only auto-rich takes over the drawer: an explicitly chosen renderer
+     * embeds in every sample chip at any size, so the drawer shows each
+     * invocation side by side, and filtering a table down doesn't flip
+     * between the two layouts. */
     let rich_drawer =
       drawer
+      && model.active_renderer == None
       && (
         switch (rich_drawer_rows(model, info)) {
         | Some(n) => n > inline_rows_cap
