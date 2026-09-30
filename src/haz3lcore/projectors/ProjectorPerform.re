@@ -228,11 +228,40 @@ let go =
           List.assoc_opt(id, z.refractors.manuals)
           |> Option.map((pr: Refractors.entry) => pr.model);
         let is_ephemeral = Id.Map.mem(id, z.refractors.multis.ephemerals);
-        /* don't unselect/remold here — the normal update cycle handles that */
+        /* Unselect after replacing, so a column action doesn't leave the
+         * whole rewritten expression selected. If the action introduced a
+         * hole (a filter's comparand, a new column's label), put the caret
+         * on the first one so the user can type straight into it. */
+        let rec holes = (seg: Base.segment): list(Id.t) =>
+          List.concat_map(
+            (p: Base.piece) =>
+              switch (p) {
+              | Grout(g) => [g.id]
+              | Tile(t) when Tile.label(t) == ["?"] => [t.id]
+              | Tile(t) => List.concat_map(holes, t.children)
+              | _ => []
+              },
+            seg,
+          );
         let do_replace = () => {
           let* (l, r) = TermData.extremes_shards(id, term_data);
           let+ z = Select.shard_range(l, r, z);
-          Zipper.replace_selection(Right, parenthesized_seg, z);
+          let old_holes = holes(z.selection.content);
+          let z =
+            Zipper.replace_selection(Right, parenthesized_seg, z)
+            |> Zipper.unselect;
+          switch (
+            List.find_opt(
+              h => !List.mem(h, old_holes),
+              holes(parenthesized_seg),
+            )
+          ) {
+          | Some(h) =>
+            /* the column menu holds DOM focus; hand it back so keys reach the hole */
+            FocusEffect.schedule_editor();
+            Option.value(~default=z, Move.jump_to_side_of_id(Left, z, h));
+          | None => z
+          };
         };
         if (is_ephemeral && Option.is_none(manual_model)) {
           /* Ephemeral refractor: replace syntax only, auto system re-detects */
