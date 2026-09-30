@@ -207,12 +207,20 @@ let structural_tests = [
         };
       | _ => fail("expected tuple at budget 12")
       };
-      /* Budget 22: all 3 fields fit (3*5 + 2*2 = 19 ≤ 22), no annotation. */
+      /* Budget 22: leading fields first, so the first field takes the
+         surplus and the other two stay counted rather than shown cut. */
       let abbreviated_22: Exp.t = run_abbreviation(~available=22, original);
       switch (abbreviated_22.term) {
       | Tuple(elements) =>
-        check(Alcotest.int, "element count at 22", 3, List.length(elements))
+        check(Alcotest.int, "element count at 22", 2, List.length(elements))
       | _ => fail("expected tuple at budget 22")
+      };
+      /* Budget 70: all three fields fit whole (63 columns). */
+      let abbreviated_70: Exp.t = run_abbreviation(~available=70, original);
+      switch (abbreviated_70.term) {
+      | Tuple(elements) =>
+        check(Alcotest.int, "element count at 70", 3, List.length(elements))
+      | _ => fail("expected tuple at budget 70")
       };
     },
   ),
@@ -494,7 +502,7 @@ let unit_cost_atom_tests = [
 
 let module_abbreviation_tests = [
   test_case(
-    "labeled tuples keep field names under tight budget",
+    "labeled tuples show leading fields whole under tight budget",
     `Quick,
     (): unit => {
       open IdTagged.FreshGrammar;
@@ -508,19 +516,10 @@ let module_abbreviation_tests = [
       let abbreviated: Exp.t = run_abbreviation(~available=24, original);
       switch (abbreviated.term) {
       | Tuple(elements) =>
-        check(Alcotest.int, "field count", 3, List.length(elements));
+        /* the first field and a count, not three cut-down fields */
+        check(Alcotest.int, "field count", 2, List.length(elements));
         let labels: list(string) = collect_labels(elements);
-        check(Alcotest.int, "label count", 3, List.length(labels));
-        List.iter(
-          (label: string) =>
-            check(
-              Alcotest.bool,
-              "label not empty",
-              true,
-              String.length(label) > 0,
-            ),
-          labels,
-        );
+        check(Alcotest.(list(string)), "labels", ["alpha"], labels);
       | _ => fail("expected tuple after abbreviation")
       };
     },
@@ -695,6 +694,7 @@ let module_abbreviation_tests = [
     },
   ),
 ];
+
 
 let tests = (
   "Abbreviate",

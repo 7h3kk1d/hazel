@@ -297,7 +297,7 @@ module SampleLength = {
 
   let get = (window: Sample.Window.mode, sample: Sample.t): int =>
     Hashtbl.find_opt(lengths, sample.id)
-    |> Option.value(~default=window == Single ? 150 : 12);
+    |> Option.value(~default=window == Single ? 150 : 45);
 
   let set = (id: int, length: int): unit =>
     Hashtbl.replace(lengths, id, length);

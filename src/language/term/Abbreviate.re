@@ -231,7 +231,85 @@ module AbbrevSequence = {
     go(0, items);
   };
 
-  let run = (~items: list(Exp.t), ~abbreviate: Exp.t => Exp.t): list(Exp.t) => {
+  /* Whether abbreviation cut anything short: every truncation leaves an
+     ellipsis in a string, label, or placeholder. */
+  let truncated = (e: Exp.t): bool => {
+    let found = ref(false);
+    let n = String.length(flat_ellipses);
+    let has = (s: string): bool => {
+      let rec at = i =>
+        i
+        + n <= String.length(s)
+        && (String.sub(s, i, n) == flat_ellipses || at(i + 1));
+      at(0);
+    };
+    let _: Exp.t =
+      Exp.map_term(
+        ~f_exp=
+          (continue, e: Exp.t) => {
+            switch (e.term) {
+            | Invalid(s)
+            | Var(s)
+            | Atom(String(s)) when has(s) => found := true
+            | _ => ()
+            };
+            continue(e);
+          },
+        e,
+      );
+    found^;
+  };
+
+  /* Leading items first: the first item gets all the budget but what the
+     trailing "…+N" needs, and each later item is kept only if it renders
+     whole; the rest collapse into the count. So a list of records shows
+     its first record's leading fields in full, instead of every record
+     as "(…)" and every label cut down. None when even the first item
+     can't reach its minimum form, leaving the breadth-first fallback. */
+  let consume_prefix =
+      (items: list(Exp.t), ~abbreviate: Exp.t => Exp.t)
+      : option(list(Exp.t)) => {
+    let total = List.length(items);
+    let reserve_after = (i: int): int => {
+      let unshown = total - i - 1;
+      unshown > 0 ? separator_cost + count_annotation_cost(unshown) : 0;
+    };
+    let count_rest = (i: int): list(Exp.t) => {
+      available := available^ - count_annotation_cost(total - i);
+      [count_annotation_term(total - i)];
+    };
+    let rec go = (i: int, rest: list(Exp.t)): list(Exp.t) =>
+      switch (rest) {
+      | [] => []
+      | [item, ...rest'] =>
+        let budget = available^ - reserve_after(i);
+        if (budget < min_display_cost(item)) {
+          count_rest(i);
+        } else {
+          let before = available^;
+          let (abbr, _) =
+            AbbrevBudget.with_budget(~budget, ~run=() => abbreviate(item));
+          if (i > 0 && truncated(abbr)) {
+            available := before;
+            count_rest(i);
+          } else if (rest' == []) {
+            [abbr];
+          } else {
+            available := available^ - separator_cost;
+            [abbr, ...go(i + 1, rest')];
+          };
+        };
+      };
+    switch (items) {
+    | [first, ..._]
+        when available^ - reserve_after(0) >= min_display_cost(first) =>
+      Some(go(0, items))
+    | _ => None
+    };
+  };
+
+  let run_breadth_first =
+      (~items: list(Exp.t), ~abbreviate: Exp.t => Exp.t): list(Exp.t) => {
     let count: int = List.length(items);
     if (count <= 0) {
       [];
@@ -306,6 +384,12 @@ module AbbrevSequence = {
       };
     };
   };
+
+  let run = (~items: list(Exp.t), ~abbreviate: Exp.t => Exp.t): list(Exp.t) =>
+    switch (consume_prefix(items, ~abbreviate)) {
+    | Some(shown) => shown
+    | None => run_breadth_first(~items, ~abbreviate)
+    };
 };
 
 /* Display width of the ellipsis character: 1 column on screen,
