@@ -2317,10 +2317,23 @@ module M: Projector = {
       SampleLength.reset();
       model;
     | ToggleModal(pm) =>
-      let activated = {
-        ...model,
-        active_renderer: pm,
-      };
+      /* Choosing a rich view opens it in drawer mode (the talk's
+       * rich-probes slide), so the table sits under its line. */
+      let activated =
+        switch (pm) {
+        | Some(_) =>
+          Settings.version := Settings.version^ + 1;
+          FocusEffect.schedule(info.id);
+          {
+            ...model,
+            active_renderer: pm,
+            drawer_mode: true,
+          };
+        | None => {
+            ...model,
+            active_renderer: pm,
+          }
+        };
       switch (model.active_renderer, pm) {
       | (None, _) => activated
       | (Some(active), Some(next))
